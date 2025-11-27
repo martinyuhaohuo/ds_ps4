@@ -1,0 +1,25 @@
+name: ps3
+channels:
+  - conda-forge
+  - nodefaults
+dependencies:
+  # defaults
+  - python>=3.8
+  - pip
+  - pre-commit
+  - pytest>=6  # Adds --import-mode option
+  - pytest-cov
+  - setuptools-scm
+  # data
+  - pandas
+  - numpy
+  - dask-ml
+  - ydata-profiling
+  # interactive
+  - ipykernel
+  # plots
+  - matplotlib
+  # ml
+  - glum
+  - lightgbm
+  - scikit-learn
