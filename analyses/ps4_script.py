@@ -11,6 +11,7 @@ from sklearn.model_selection import GridSearchCV
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, SplineTransformer, StandardScaler
 import lightgbm as lgb
+import dalex as dx
 
 import sys, os
 
@@ -117,31 +118,31 @@ preprocessor = ColumnTransformer(
 )
 
 preprocessor.set_output(transform="pandas")
-model_pipeline = Pipeline([
+model_pipeline_GLM = Pipeline([
     # TODO: Define pipeline steps here
     ("preprocessor", preprocessor),
     ("GLM_model", GeneralizedLinearRegressor(family=TweedieDistribution(1.5), l1_ratio=1, fit_intercept=True))
 ])
 
 # let's have a look at the pipeline
-model_pipeline
+model_pipeline_GLM
 
 # let's check that the transforms worked
-model_pipeline[:-1].fit_transform(df_train)
+model_pipeline_GLM[:-1].fit_transform(df_train)
 
-model_pipeline.fit(df_train, y_train_t, GLM_model__sample_weight=w_train_t)
+model_pipeline_GLM.fit(df_train, y_train_t, GLM_model__sample_weight=w_train_t)
 
 pd.DataFrame(
     {
         "coefficient": np.concatenate(
-            ([model_pipeline[-1].intercept_], model_pipeline[-1].coef_)
+            ([model_pipeline_GLM[-1].intercept_], model_pipeline_GLM[-1].coef_)
         )
     },
-    index=["intercept"] + model_pipeline[-1].feature_names_,
+    index=["intercept"] + model_pipeline_GLM[-1].feature_names_,
 ).T
 
-df_test["pp_t_glm2"] = model_pipeline.predict(df_test)
-df_train["pp_t_glm2"] = model_pipeline.predict(df_train)
+df_test["pp_t_glm2"] = model_pipeline_GLM.predict(df_test)
+df_train["pp_t_glm2"] = model_pipeline_GLM.predict(df_train)
 
 print(
     "training loss t_glm2:  {}".format(
@@ -209,6 +210,7 @@ param_grid = {
 cv = GridSearchCV(model_pipeline, param_grid, cv=5)
 
 cv.fit(X_train_t, y_train_t, GBM_model__sample_weight=w_train_t)
+best_lgbm = cv.best_estimator_
 
 df_test["pp_t_lgbm"] = cv.best_estimator_.predict(X_test_t)
 df_train["pp_t_lgbm"] = cv.best_estimator_.predict(X_train_t)
@@ -379,8 +381,31 @@ lgb.plot_metric(best_lgbm_pipe[-1])
 
 # %%
 # TODO Write a function evaluate_predictions within the evaluation module, which computes various metrics given the true outcome values and the model’s predictions.
-compute_metrics(df_test["pp_t_lgbm_constrained"], y_test_t, w_test_t, model = "constrained_LGBM")
-
+c_LGBM = compute_metrics(df_test["pp_t_lgbm_constrained"], y_test_t, w_test_t, model = "constrained_LGBM")
+u_LGBM = compute_metrics(df_test["pp_t_lgbm"], y_test_t, w_test_t, model = "LGBM")
+result = pd.concat([c_LGBM, u_LGBM])
+result
 
 # %%
-compute_metrics(np.array([1,2,3,4,5]), np.array([5,4,3,2,1]), )
+# Plots the PDPs of all features and compare the PDPs between the unconstrained and constrained LGBM. 
+# Steps
+# 1. Define an explainer object using the constrained lgbm model, data and features.
+# 2. Compute the marginal effects using model_profile and plot the PDPs.
+# 3. Compare the PDPs between the unconstrained and constrained LGBM
+exp_c = dx.Explainer(best_lgbm_pipe, X_train_t, y_train_t)
+exp_c.model_profile().plot()
+
+exp_u = dx.Explainer(best_lgbm, X_train_t, y_train_t)
+exp_u.model_profile().plot()
+
+# %%
+# TODO Compare the decompositions of the predictions for some specific row (e.g. the first row of the test set) for the constrained LGBM and our initial GLM.
+# Step
+# 1. Define DALEX Explainer objects for both.
+# 2. Call the method `predict_parts` for each and provide one observation as data point and `type="shap"`.
+# 3. Plot both decompositions and compare where they might deviate.
+exp_GLM = dx.Explainer(model_pipeline_GLM, X_train_t, y_train_t)
+result_GLM = exp_GLM.predict_parts(new_observation = X_test_t.loc[[1]], type = 'shap', B=10, label = "GLM")
+result_LGBM = exp_c.predict_parts(new_observation = X_test_t.loc[[1]], type = 'shap', B=10, label = "LGBM")
+# %%
+result_LGBM.plot(result_GLM)

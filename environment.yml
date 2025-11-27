@@ -12,7 +12,7 @@ dependencies:
   - setuptools-scm
   # data
   - pandas
-  - numpy
+  - numpy=1.26.4
   - dask-ml
   - ydata-profiling
   # interactive
@@ -23,3 +23,4 @@ dependencies:
   - glum
   - lightgbm
   - scikit-learn
+  - dalex=1.7.0 
