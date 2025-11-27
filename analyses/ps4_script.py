@@ -102,8 +102,7 @@ print(
 numeric_cols = ["BonusMalus", "Density"]
 
 numeric_transformer = Pipeline(steps=[
-    ("scaler", StandardScaler()),
-    ("spline", SplineTransformer(n_knots=4, knots="quantile", include_bias=False))
+    ("scaler", StandardScaler())
 ])
 
 #add_constant = FunctionTransformer(lambda X: np.ones((X.shape[0],1)))
@@ -314,8 +313,7 @@ plt.show()
 # 2: Create a new model pipeline or estimator called constrained_lgbm. 
 # Introduce an increasing monotonicity constrained for BonusMalus
 numeric_transformer = Pipeline(steps=[
-    ("scaler", StandardScaler()),
-    ("spline", SplineTransformer(n_knots=4, knots="quantile", include_bias=False))
+    ("scaler", StandardScaler())
 ])
 
 preprocessor = ColumnTransformer(
@@ -330,13 +328,13 @@ preprocessor = ColumnTransformer(
 preprocessor.set_output(transform="pandas")
 constrained_model_pipeline = Pipeline([
     ("preprocessor", preprocessor),
-    ("GBM_model", LGBMRegressor(objective="tweedie", tweedie_variance_power=1.5, monotone_constraint = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]))
+    ("GBM_model", LGBMRegressor(objective="tweedie", tweedie_variance_power=1.5, monotone_constraint = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]))
 ])
 
 # %%
 # 3. Cross-validate and predict using the best estimator
 param_grid = {
-    "GBM_model__n_estimators":[100,200,300],
+    "GBM_model__n_estimators":[50,100,200,300],
     "GBM_model__learning_rate":[0.01,0.02,0.05,0.1,0.2]
 }
 
@@ -409,3 +407,5 @@ result_GLM = exp_GLM.predict_parts(new_observation = X_test_t.loc[[1]], type = '
 result_LGBM = exp_c.predict_parts(new_observation = X_test_t.loc[[1]], type = 'shap', B=10, label = "LGBM")
 # %%
 result_LGBM.plot(result_GLM)
+
+
